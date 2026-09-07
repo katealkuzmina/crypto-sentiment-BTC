@@ -3,7 +3,9 @@ import pandas as pd
 from src.returns import HORIZONS_HOURS, compute_forward_returns
 
 
-def build_sentiment_index(labeled: pd.DataFrame, freq: str = "1h") -> pd.DataFrame:
+def build_sentiment_index(
+    labeled: pd.DataFrame, freq: str = "1h", anchor: str | None = None
+) -> pd.DataFrame:
     """labeled: DataFrame with columns published_on (Unix seconds),
     sentiment_score (float, -1..1), confidence (float, 0..1).
 
@@ -14,12 +16,22 @@ def build_sentiment_index(labeled: pd.DataFrame, freq: str = "1h") -> pd.DataFra
       - weighted_sentiment: confidence-weighted mean sentiment_score
       - article_count: number of articles in the bin
 
+    anchor: optional pandas-Timedelta-parseable offset (e.g. "18h") added
+    to each floored bin timestamp. Use this when `freq` is coarser than
+    how the underlying events cluster in time — e.g. daily bins for
+    articles that actually publish in the evening. Without it, a "24h
+    forward return" computed from a midnight-floored daily bin is mostly
+    a return that already happened by the time a typical article in that
+    bin was published.
+
     Bins with zero articles are NOT included in the output — the caller
     is responsible for reindexing/filling against a complete time grid
     if needed."""
     df = labeled.copy()
     df["timestamp"] = pd.to_datetime(df["published_on"].astype(int), unit="s", utc=True)
     df["bin"] = df["timestamp"].dt.floor(freq)
+    if anchor is not None:
+        df["bin"] = df["bin"] + pd.Timedelta(anchor)
 
     def weighted_mean(group: pd.DataFrame) -> float:
         weights = group["confidence"]

@@ -19,6 +19,31 @@ def test_build_sentiment_index_buckets_by_hour():
     assert first_hour["mean_sentiment"] == pytest.approx(0.0)
 
 
+def test_build_sentiment_index_anchor_shifts_bin_timestamp():
+    labeled = pd.DataFrame({
+        "published_on": [1704110400, 1704128400],  # 2024-01-01 12:00, 17:00 UTC
+        "sentiment_score": [0.5, -0.5],
+        "confidence": [1.0, 1.0],
+    })
+
+    index = build_sentiment_index(labeled, freq="1D", anchor="18h")
+
+    assert len(index) == 1
+    assert index.index[0] == pd.Timestamp("2024-01-01 18:00", tz="UTC")
+
+
+def test_build_sentiment_index_default_anchor_is_unchanged():
+    labeled = pd.DataFrame({
+        "published_on": [1704110400],
+        "sentiment_score": [0.5],
+        "confidence": [1.0],
+    })
+
+    index = build_sentiment_index(labeled, freq="1D")
+
+    assert index.index[0] == pd.Timestamp("2024-01-01 00:00", tz="UTC")
+
+
 def test_build_sentiment_index_weighted_mean_respects_confidence():
     labeled = pd.DataFrame({
         "published_on": [1704067200, 1704067800],
