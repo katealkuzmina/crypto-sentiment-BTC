@@ -1,3 +1,6 @@
+import argparse
+from pathlib import Path
+
 import nbformat as nbf
 
 
@@ -47,10 +50,6 @@ def build_skeleton_notebook() -> nbf.NotebookNode:
         nbf.v4.new_markdown_cell("*(results and conclusions here)*"),
     ]
     return nb
-
-
-import argparse
-from pathlib import Path
 
 
 def write_skeleton_notebook(path: Path, overwrite: bool = False) -> None:
