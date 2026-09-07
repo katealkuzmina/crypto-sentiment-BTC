@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.returns import HORIZONS_HOURS, compute_forward_returns
+from src.returns import HORIZONS_HOURS, compute_forward_returns, compute_trailing_returns
 
 
 def build_sentiment_index(
@@ -61,4 +61,20 @@ def join_sentiment_and_returns(
     dropped, since there's no sentiment value to correlate against a
     return for them."""
     returns = compute_forward_returns(price, horizons=horizons)
+    return sentiment_index.join(returns, how="inner")
+
+
+def join_sentiment_and_trailing_returns(
+    sentiment_index: pd.DataFrame,
+    price: pd.Series,
+    horizons: dict[str, int] = HORIZONS_HOURS,
+) -> pd.DataFrame:
+    """Same contract as join_sentiment_and_returns, but joins against
+    TRAILING returns (the return over the window ENDING at each
+    timestamp) instead of forward returns. Use this for any hypothesis
+    where price is the leading variable and sentiment the lagging one —
+    e.g. "does a past price move predict today's sentiment?" A forward
+    return is not a valid predictor for that direction: see
+    compute_trailing_returns's docstring."""
+    returns = compute_trailing_returns(price, horizons=horizons)
     return sentiment_index.join(returns, how="inner")

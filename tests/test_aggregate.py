@@ -1,7 +1,11 @@
 import pandas as pd
 import pytest
 
-from src.aggregate import build_sentiment_index, join_sentiment_and_returns
+from src.aggregate import (
+    build_sentiment_index,
+    join_sentiment_and_returns,
+    join_sentiment_and_trailing_returns,
+)
 
 
 def test_build_sentiment_index_buckets_by_hour():
@@ -81,3 +85,18 @@ def test_join_sentiment_and_returns_inner_join_drops_newsless_hours():
 
     assert len(joined) == 1
     assert joined.iloc[0]["1h"] == pytest.approx((101.0 - 100.0) / 100.0)
+
+
+def test_join_sentiment_and_trailing_returns_uses_past_window():
+    idx = pd.date_range("2024-01-01", periods=5, freq="h")
+    price = pd.Series([100.0, 101.0, 102.0, 103.0, 104.0], index=idx)
+
+    sentiment_index = pd.DataFrame(
+        {"mean_sentiment": [0.5], "weighted_sentiment": [0.5], "article_count": [1]},
+        index=[idx[4]],
+    )
+
+    joined = join_sentiment_and_trailing_returns(sentiment_index, price, horizons={"1h": 1})
+
+    assert len(joined) == 1
+    assert joined.iloc[0]["1h"] == pytest.approx((104.0 - 103.0) / 103.0)
