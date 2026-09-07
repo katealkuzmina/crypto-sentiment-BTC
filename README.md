@@ -93,6 +93,7 @@ cp .env.example .env                           # then fill in CRYPTOCOMPARE_API_
 uv run python -m src.fetch_price               # pulls data/btc_price_hourly.csv (no key needed)
 uv run python -m src.fetch_news                # pulls data/news_raw.csv (spends real API quota)
 uv run python -m src.label_sentiment           # pulls data/news_labeled.csv (spends real API budget)
+uv run python -m ipykernel install --user --name crypto-sentiment-btc --display-name "Crypto Sentiment BTC (Python 3.12)"
 uv run jupyter notebook crypto_sentiment_btc.ipynb
 ```
 

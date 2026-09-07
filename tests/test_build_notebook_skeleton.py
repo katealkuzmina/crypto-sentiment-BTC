@@ -1,4 +1,6 @@
-from scripts.build_notebook_skeleton import build_skeleton_notebook
+import pytest
+
+from scripts.build_notebook_skeleton import build_skeleton_notebook, write_skeleton_notebook
 
 
 def test_skeleton_has_expected_section_headers():
@@ -32,3 +34,30 @@ def test_skeleton_is_valid_notebook_format(tmp_path):
 
     reloaded = nbf.read(out_path, as_version=4)
     nbf.validate(reloaded)
+
+
+def test_write_skeleton_notebook_refuses_to_overwrite_existing_file(tmp_path):
+    out_path = tmp_path / "existing.ipynb"
+    out_path.write_text("not a notebook, just a marker file")
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        write_skeleton_notebook(out_path)
+
+    assert out_path.read_text() == "not a notebook, just a marker file"
+
+
+def test_write_skeleton_notebook_overwrite_flag_allows_it(tmp_path):
+    out_path = tmp_path / "existing.ipynb"
+    out_path.write_text("stale skeleton")
+
+    write_skeleton_notebook(out_path, overwrite=True)
+
+    assert out_path.read_text() != "stale skeleton"
+
+
+def test_write_skeleton_notebook_creates_new_file(tmp_path):
+    out_path = tmp_path / "new.ipynb"
+
+    write_skeleton_notebook(out_path)
+
+    assert out_path.exists()

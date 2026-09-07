@@ -49,7 +49,28 @@ def build_skeleton_notebook() -> nbf.NotebookNode:
     return nb
 
 
-if __name__ == "__main__":
+import argparse
+from pathlib import Path
+
+
+def write_skeleton_notebook(path: Path, overwrite: bool = False) -> None:
+    """Writes the skeleton notebook to `path`. Refuses if `path` already
+    exists unless `overwrite=True` — a finished, executed notebook is
+    indistinguishable from a stale skeleton at the filesystem level, and
+    this script has no way to tell an in-progress analysis from one safe
+    to discard."""
+    if path.exists() and not overwrite:
+        raise FileExistsError(
+            f"{path} already exists — refusing to overwrite. "
+            "Pass overwrite=True (or --force on the CLI) if this is intentional."
+        )
     nb = build_skeleton_notebook()
-    with open("crypto_sentiment_btc.ipynb", "w", encoding="utf-8") as f:
+    with path.open("w", encoding="utf-8") as f:
         nbf.write(nb, f)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true", help="Overwrite an existing notebook")
+    args = parser.parse_args()
+    write_skeleton_notebook(Path("crypto_sentiment_btc.ipynb"), overwrite=args.force)
