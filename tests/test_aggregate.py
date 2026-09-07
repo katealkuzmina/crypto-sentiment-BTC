@@ -56,6 +56,18 @@ def test_build_sentiment_index_weighted_mean_respects_confidence():
     assert index.iloc[0]["weighted_sentiment"] == pytest.approx((1.0 * 0.9 + -1.0 * 0.1) / 1.0)
 
 
+def test_build_sentiment_index_weighted_mean_ignores_missing_score():
+    labeled = pd.DataFrame({
+        "published_on": [1704067200, 1704067800],
+        "sentiment_score": [0.5, float("nan")],
+        "confidence": [0.5, 0.5],
+    })
+
+    index = build_sentiment_index(labeled)
+
+    assert index.iloc[0]["weighted_sentiment"] == pytest.approx(0.5)
+
+
 def test_join_sentiment_and_returns_inner_join_drops_newsless_hours():
     idx = pd.date_range("2024-01-01", periods=5, freq="h")
     price = pd.Series([100.0, 101.0, 102.0, 103.0, 104.0], index=idx)

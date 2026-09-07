@@ -34,10 +34,11 @@ def build_sentiment_index(
         df["bin"] = df["bin"] + pd.Timedelta(anchor)
 
     def weighted_mean(group: pd.DataFrame) -> float:
-        weights = group["confidence"]
+        valid = group.dropna(subset=["sentiment_score"])
+        weights = valid["confidence"]
         if weights.sum() == 0:
-            return group["sentiment_score"].mean()
-        return (group["sentiment_score"] * weights).sum() / weights.sum()
+            return valid["sentiment_score"].mean()
+        return (valid["sentiment_score"] * weights).sum() / weights.sum()
 
     grouped = df.groupby("bin")
     result = pd.DataFrame({
