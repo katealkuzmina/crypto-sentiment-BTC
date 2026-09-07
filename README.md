@@ -40,15 +40,32 @@ as a production trading signal.
    and a continuous -1..+1 sentiment score in one structured response.
 2. **Aggregation** — articles bucketed into an hourly sentiment index
    (mean and confidence-weighted mean sentiment, plus article count as a
-   volume signal).
+   volume signal). The daily-level index (the primary aggregation, see
+   below) is anchored to 18:00 UTC — the dataset's median article
+   publication hour — rather than midnight, so a "24h forward return"
+   measured from that bin isn't mostly a return that already happened by
+   the time a typical article in it was published.
 3. **Hypothesis test**, in increasing order of rigor:
    - Pearson/Spearman correlation of the sentiment index against BTC
-     returns at 1h/24h/7d/14d horizons.
+     **forward** returns at 24h/7d/14d horizons (daily) or 1h/24h/7d/14d
+     (hourly, secondary) — valid for testing whether sentiment *leads*
+     price.
+   - For the reverse direction (does a past price move predict today's
+     sentiment), the same correlation against **trailing** returns
+     (`price[t] / price[t-h] - 1`, entirely in the past relative to t) —
+     a forward return is not a valid predictor here, since at this
+     dataset's weekly sampling grid a forward return one row back is
+     nearly identical to today's trailing return of the same horizon.
    - OLS regression of returns on the sentiment index plus lagged values —
      distinguishes "sentiment leads price" from "sentiment reacts to
      price."
-   - Granger causality test (`statsmodels`), both directions.
-   - Bonferroni correction across the 4 horizons × multiple tests.
+   - Granger causality test (`statsmodels`), both directions, each on the
+     correct (forward or trailing) series for that direction.
+   - Bonferroni correction, in three independent families: correlation +
+     OLS (sentiment→price), Granger causality, and direct trailing
+     correlation (price→sentiment).
+   - Outlier-robustness check (correlation after dropping the 1–3 most
+     extreme days) on every result reported as a headline finding.
 4. **Held-out evaluation** — relationship characterized on the first ~10
    months of 2024; the last ~2 months held out to check whether it
    replicates out-of-sample.
@@ -58,21 +75,32 @@ as a production trading signal.
 **Partial relationship, and in the opposite direction from a trading-signal
 framing.** Full detail and code in `crypto_sentiment_btc.ipynb`.
 
-- **No evidence that sentiment predicts future price moves.** Across all 4
-  horizons, in the correlation, OLS-with-lags, and Granger-causality tests,
+- **No evidence that sentiment predicts future price moves.** Across every
+  horizon, in the correlation, OLS-with-lags, and Granger-causality tests,
   `sentiment -> returns` never survives Bonferroni correction — a checked
   null result, not just an absence of looking.
-- **One relationship is real:** daily-sampled sentiment moves together with
-  the *contemporaneous* 24h return (Pearson r≈0.47, survives correction in
-  two independent test families). It holds directionally on a held-out
-  final two months (r≈0.59) but that split (n=10) is too small to
-  reconfirm significance on its own.
-- **The strongest, most robust finding runs the other way:** Granger
-  causality shows `returns -> sentiment` at the 7-day and 14-day horizons
-  (p < 0.002, both lags, comfortably survives correction). BTC's price
-  trend over the prior week or two Granger-causes that period's news
-  sentiment — news reads as a lagging narrative on price, not a leading
-  indicator of it.
+- **The 24h contemporaneous correlation is real but fragile.**
+  Daily-sampled sentiment moves together with the *same-day* 24h return
+  (Pearson r≈0.39, survives correction in two independent test families —
+  correlation and OLS) — but it loses significance entirely once a single
+  extreme day is dropped from the sample. Not treated as a headline
+  result here.
+- **The strongest, most robust finding is a direct correlation, not the
+  Granger test:** today's sentiment correlates with the **trailing**
+  (past) return ending today, strongest at 7 days (Pearson r≈+0.64,
+  p<0.0001), confirmed by Spearman at the same horizon and by both
+  methods at 14 days — four of six tests in that family survive Bonferroni
+  correction, and the result barely moves when the 3 most extreme days
+  are removed (r stays between 0.53 and 0.64 throughout). It replicates
+  directionally on a held-out final two months (r≈+0.37 vs. +0.72
+  in-sample) though that 10-week split is too small to reconfirm
+  significance on its own. A secondary Granger-causality test on the same
+  trailing series points the same way but doesn't clear significance at
+  this sample size (p≈0.07–0.09) — a power limitation of the stricter
+  test, not a contradiction of the correlation. **BTC's price move over
+  the prior week moves together with that week's news sentiment —
+  sentiment reads as a lagging narrative on price, not a leading
+  indicator of it.**
 - **Biggest caveat:** the sampling collapse described above means every
   test above ultimately runs on 53 independent weekly observations, not
   the ~2600-article or 490-hour sample size it might look like at first —
@@ -121,3 +149,7 @@ results).
   HTTP 403 from Cloudflare on every path, including the API, confirmed
   from two independent networks) — findings are grounded in a different,
   though overlapping, news source.
+- The 14-day horizon's return window is twice the ~7-day sampling grid,
+  so consecutive 14d observations overlap by half — a known source of
+  downward-biased p-values on that horizon specifically, distinct from
+  the 53-day sample-size caveat above.
